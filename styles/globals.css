@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;900&display=swap');
+
+@layer base {
+	.bg-green {
+		background-color: rgb(25, 230, 140);
+	}
+	img {
+		width: 136px;
+    margin-bottom: 40px;
+    margin-top: 64px;
+	}
+}
+
+.btn-white {
+	@apply py-2 px-4 bg-white text-black font-semibold w-2/6 h-14 tracking-widest uppercase rounded-full shadow-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-75;
+}
+
+img {
+	width: unset;
+}
