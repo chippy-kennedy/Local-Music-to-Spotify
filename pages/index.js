@@ -64,7 +64,7 @@ export default function Home() {
 							</div>
 
 							<div className="my-8 mx-auto">
-								<Link href="/api/authenticate" className="btn-orange mx-auto">
+								<Link href="/api/get-auth-url" className="btn-orange mx-auto">
 									<div className="btn btn-orange">
 										Log in with Spotify
 									</div>

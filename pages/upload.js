@@ -1,68 +1,53 @@
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import Image from 'next/image'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link'
-import Uppy from "@uppy/core"
-import { DragDrop } from "@uppy/react"
-import ThumbnailGenerator from "@uppy/thumbnail-generator"
-import XHRUpload from "@uppy/xhr-upload"
-import { StatusBar } from '@uppy/react'
-import '@uppy/core/dist/style.css'
-import '@uppy/status-bar/dist/style.css'
-
-const uppy = new Uppy({
-  meta: { type: "music-upload" },
-  restrictions: {
-    maxNumberOfFiles: 3,
-    maxFileSize: 1048576 * 16,
-    allowedFileTypes: [".mp3", ".mp4"],
-  },
-  autoProceed: true,
-})
-
-uppy.use(XHRUpload, {
-  endpoint: "/api/upload",
-  fieldName: "music-upload",
-  formData: true,
-})
-
-uppy.use(ThumbnailGenerator, {
-  thumbnailWidth: 200,
-  waitForThumbnailsBeforeUpload: false,
-})
-
-uppy.on("thumbnail:generated", (file, preview) => {
-  console.log(file.name, preview)
-})
-
-uppy.on("complete", result => {
-  const url = result.successful[0].uploadURL
-  console.log("successful upload", result)
-})
-
-uppy.on("error", error => {
-  console.error(error.stack)
-})
-
-uppy.on("restriction-failed", (file, error) => {
-  const err = error.stack.includes("exceeds maximum allowed size of 16 MB")
-    ? "A fájl mérete nagyobb mint 4MB"
-    : error
-
-  alert(
-    "Feltöltési hiba: " +
-      err +
-      "\n" +
-      file.name +
-      " Mérete : " +
-      Math.round(file.size / 1024 / 1024) +
-      "MB"
-  )
-})
+import Uploader from '../components/uploader'
+import { isEmpty } from '../utils'
+import axios from 'axios'
 
 export default function Upload() {
-	const [state, setState] = useState('new');
+	const router = useRouter()
+	const [isLoading, setLoading] = useState(false)
+	const [uploadStatus, setUploadStatus] = useState('not-started')
+	const [unmatchedSongs, setUnmatchedSongs] = useState([])
+	const [matchedSongs, setMatchedSongs] = useState([])
 
+	useEffect(() => {
+    if (uploadStatus == 'complete' && !isEmpty(unmatchedSongs)) {
+			matchSongs(unmatchedSongs)
+    }
+  }, [uploadStatus, unmatchedSongs]);
+
+	const matchSongs = async (unmatchedSongs) => {
+		const { code } = router.query
+
+		unmatchedSongs.forEach(async (song) => {
+			console.log("\n---------")
+			console.log(song)
+			await axios.post('/api/find-song', {
+				song: song,
+				accessToken: code
+			}).then(function (response) {
+				//add id to song
+				console.log(response);
+			})
+			.catch(function (error) {
+				console.log(error);
+			});
+
+			await axios.post('/api/add-to-library', {
+				songId: song.id,
+				accessToken: code
+			}).then(function (response) {
+				console.log(response);
+			})
+			.catch(function (error) {
+				console.log(error);
+			});
+		})
+	}
 
   return (
 		<div className="flex flex-col items-center justify-center min-h-screen pt-2 bg-green">
@@ -88,42 +73,46 @@ export default function Upload() {
 								<p>Save your local music library to Spotify without needing to download your library to every device</p>
 							</div>
 
-							<div className="">
-								<h3 className="text-3xl font-bold mt-12">
-									Step 2: Upload Your Local Music
-								</h3>
-							</div>
-							<div className="my-6 max-w-screen-md mx-auto">
-								<p>
-									Upload your music below. Click and drag or click the button to upload.
-								</p>
-							</div>
-
-							<div className="my-8 mx-auto">
-								<div className="btn btn-orange">
-									<DragDrop
-										uppy={uppy}
-										locale={{
-											strings: {
-												// Text to show on the droppable area.
-												// `%{browse}` is replaced with a link that opens the system file selection dialog.
-												dropHereOr: "Upload Music",
-												// Used as the label for the link that opens the system file selection dialog.
-												browse: "Browse for Local Music",
-											},
-										}}
-									/>
+							{uploadStatus == 'not-started' &&
+							<div>
+								<div className="">
+									<h3 className="text-3xl font-bold mt-12">
+										Step 2: Upload Your Local Music
+									</h3>
 								</div>
-								<StatusBar
-									uppy={uppy}
-									hideUploadButton
-									hideAfterFinish={false}
-									showProgressDetails
-								/>
+								<div className="my-6 max-w-screen-sm mx-auto">
+									<p>
+										Upload your music below. Click and drag or click the button to upload. You can start with one song or many, just note that larger batches will take more time.
+									</p>
+								</div>
 
-
+								<div className="my-8 mx-auto">
+									<Uploader onComplete={(uploadedSongs) => {
+										setUnmatchedSongs(uploadedSongs)
+										setUploadStatus('complete')
+									}}/>
+								</div>
 							</div>
-						</div>
+							}
+							{uploadStatus == 'complete' &&
+							<div>
+								<div className="">
+									<h3 className="text-3xl font-bold mt-12">
+										Step 3: Adding Music to Your Spotify Library
+									</h3>
+								</div>
+								<div className="my-6 max-w-screen-sm mx-auto">
+									<p>
+										We got this part. We're checking each song you uploaded and adding it to your Spotify library. You can just hang out for this part.
+									</p>
+								</div>
+
+								<div className="my-8 mx-auto">
+									Progess Bar
+								</div>
+							</div>
+							}
+					</div>
 				</div>
 
 				<div className="section w-full py-10 my-12 bg-white">
